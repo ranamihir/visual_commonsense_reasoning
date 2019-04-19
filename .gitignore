@@ -5,7 +5,7 @@ checkpoints/
 vcr1
 vcr1annots.zip
 vcr1images.zip
-models/
+models/saves*
 
 sftp-config.json
 sftp-config-alt.json
