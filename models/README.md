@@ -9,13 +9,16 @@ Here's how you can replicate my val results. Run the command(s) below. First, yo
 
 - For question answering, run:
 ```
-python train.py -params multiatt/default.json -folder saves/flagship_answer 
+python train.py -params multiatt/default.json -folder saves/flagship_answer
 ```
 
 - for Answer justification, run
 ```
 python train.py -params multiatt/default.json -folder saves/flagship_rationale -rationale
 ```
+
+You can combine the validation predictions using
+`python eval_q2ar.py -answer_preds saves/flagship_answer/valpreds.npy -rationale_preds saves/flagship_rationale/valpreds.npy`
 
 ## Submitting to the leaderboard
 

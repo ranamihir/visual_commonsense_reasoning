@@ -1,9 +1,9 @@
 # Data
 
-Obtain the dataset by visiting [visualcommonsense.com/download.html](https://visualcommonsense.com/download.html). 
+Obtain the dataset by visiting [visualcommonsense.com/download.html](https://visualcommonsense.com/download.html).
  - Extract the images somewhere. I put them in a different directory, `/home/rowan/datasets2/vcr1/vcr1images` and added a symlink in this (`data`): `ln -s /home/rowan/datasets2/vcr1/vcr1images`
  - Put `train.jsonl`, `val.jsonl`, and `test.jsonl` in here (`data`).
- 
+
 You can also put the dataset somewhere else, you'll just need to update `config.py` (in the main directory) accordingly.
 ```
 unzip vcr1annots.zip
