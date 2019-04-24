@@ -21,13 +21,13 @@ class AttentionQA(Model):
     def __init__(self,
                  vocab: Vocabulary,
                  span_encoder: Seq2SeqEncoder,
-                 reasoning_encoder: Seq2SeqEncoder,
+                 answering_encoder: Seq2SeqEncoder,
                  input_dropout: float = 0.3,
                  hidden_dim_maxpool: int = 1024,
                  class_embs: bool=True,
-                 reasoning_use_obj: bool=True,
-                 reasoning_use_answer: bool=True,
-                 reasoning_use_question: bool=True,
+                 answering_use_obj: bool=True,
+                 answering_use_reason: bool=True,
+                 answering_use_question: bool=True,
                  pool_reasoning: bool = True,
                  pool_answer: bool = True,
                  pool_question: bool = False,
@@ -41,7 +41,7 @@ class AttentionQA(Model):
         self.rnn_input_dropout = TimeDistributed(InputVariationalDropout(input_dropout)) if input_dropout > 0 else None
 
         self.span_encoder = TimeDistributed(span_encoder)
-        self.reasoning_encoder = TimeDistributed(reasoning_encoder)
+        self.answering_encoder = TimeDistributed(answering_encoder)
 
         self.span_attention = BilinearMatrixAttention(
             matrix_1_dim=span_encoder.get_output_dim(),
@@ -53,13 +53,13 @@ class AttentionQA(Model):
             matrix_2_dim=self.detector.final_dim,
         )
 
-        self.reasoning_use_obj = reasoning_use_obj
-        self.reasoning_use_answer = reasoning_use_answer
-        self.reasoning_use_question = reasoning_use_question
+        self.answering_use_obj = answering_use_obj
+        self.answering_use_reason = answering_use_reason
+        self.answering_use_question = answering_use_question
         self.pool_reasoning = pool_reasoning
         self.pool_answer = pool_answer
         self.pool_question = pool_question
-        dim = sum([d for d, to_pool in [(reasoning_encoder.get_output_dim(), self.pool_reasoning),
+        dim = sum([d for d, to_pool in [(answering_encoder.get_output_dim(), self.pool_reasoning),
                                         (span_encoder.get_output_dim(), self.pool_answer),
                                         (span_encoder.get_output_dim(), self.pool_question)] if to_pool])
 
@@ -177,22 +177,22 @@ class AttentionQA(Model):
         attended_o = torch.einsum('bnao,bod->bnad', (atoo_attention_weights, obj_reps['obj_reps']))
 
 
-        reasoning_inp = torch.cat([x for x, to_pool in [(a_rep, self.reasoning_use_answer),
-                                                           (attended_o, self.reasoning_use_obj),
-                                                           (attended_q, self.reasoning_use_question)]
+        answering_inp = torch.cat([x for x, to_pool in [(a_rep, self.answering_use_reason),
+                                                           (attended_o, self.answering_use_obj),
+                                                           (attended_q, self.answering_use_question)]
                                       if to_pool], -1)
 
         if self.rnn_input_dropout is not None:
-            reasoning_inp = self.rnn_input_dropout(reasoning_inp)
-        reasoning_output = self.reasoning_encoder(reasoning_inp, answer_mask)
+            answering_inp = self.rnn_input_dropout(answering_inp)
+        answering_output = self.answering_encoder(answering_inp, answer_mask)
 
 
         ###########################################
-        things_to_pool = torch.cat([x for x, to_pool in [(reasoning_output, self.pool_reasoning),
-                                                         (a_rep, self.pool_answer),
+        things_to_pool = torch.cat([x for x, to_pool in [(answering_output, self.pool_answer),
+                                                         (a_rep, self.pool_reasoning),
                                                          (attended_q, self.pool_question)] if to_pool], -1)
 
-        pooled_rep = replace_masked_values(things_to_pool,answer_mask[...,None], -1e7).max(2)[0]
+        pooled_rep = replace_masked_values(things_to_pool, answer_mask[...,None], -1e7).max(2)[0]
         logits = self.final_mlp(pooled_rep).squeeze(2)
 
         ###########################################

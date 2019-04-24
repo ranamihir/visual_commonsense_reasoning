@@ -1,4 +1,5 @@
 import json
+import math
 from collections import defaultdict
 
 import tensorflow as tf
@@ -192,15 +193,15 @@ def _fix_tokenization(tokenized_sent, obj_to_type, det_hist=None):
     return new_tokenization, det_hist
 
 
-def fix_item(item, answer_label=None, rationales=True):
-    if rationales:
-        assert answer_label is not None
-        ctx = item['question'] + item['answer_choices'][answer_label]
+def fix_item(item, rationale_label=None, answers=True):
+    if answers:
+        assert rationale_label is not None
+        ctx = item['question'] + item['rationale_choices'][rationale_label]
     else:
         ctx = item['question']
 
     q_tok, hist = _fix_tokenization(ctx, item['objects'])
-    choices = item['rationale_choices'] if rationales else item['answer_choices']
+    choices = item['answer_choices'] if answers else item['rationale_choices']
     a_toks = [_fix_tokenization(choice, obj_to_type=item['objects'], det_hist=hist)[0] for choice in choices]
     return q_tok, a_toks
 
@@ -242,14 +243,18 @@ def process_ctx_ans_for_bert(ctx_raw, ans_raw, tokenizer, counter, endingonly, m
 
     len_total = len(context[0]) + len(answer[0]) + 3
     if len_total > max_seq_length:
-        take_away_from_ctx = min((len_total - max_seq_length + 1) // 2, max(len(context) - 32, 0))
-        take_away_from_answer = len_total - max_seq_length + take_away_from_ctx
+        take_away_total = len_total + 3 - max_seq_length
+
+        # Remove words in the respective ratios of context and answer lengths
+        take_away_from_ctx = math.ceil(len(context[0])/len_total * take_away_total)
+        take_away_from_answer = math.ceil(len(answer[0])/len_total * take_away_total)
+
         context = (context[0][take_away_from_ctx:],
                    context[1][take_away_from_ctx:])
         answer = (answer[0][take_away_from_answer:],
                   answer[1][take_away_from_answer:])
 
-        print("FOR Q{} A {}\nLTotal was {} so take away {} from ctx and {} from answer".format(
+        print("FOR  Q:\n\t{}\nFor A:\n\t{}\nTotal length was {} so take away {} from ctx and {} from answer".format(
             ' '.join(context[0]), ' '.join(answer[0]), len_total, take_away_from_ctx,
             take_away_from_answer), flush=True)
     assert len(context[0]) + len(answer[0]) + 3 <= max_seq_length
@@ -264,12 +269,12 @@ def data_iter(data_fn, tokenizer, max_seq_length, endingonly):
     with open(data_fn, 'r') as f:
         for line_no, line in enumerate(tqdm(f)):
             item = json.loads(line)
-            q_tokens, a_tokens = fix_item(item, rationales=False)
-            qa_tokens, r_tokens = fix_item(item, answer_label=item['answer_label'], rationales=True)
+            q_tokens, r_tokens = fix_item(item, answers=False)
+            qr_tokens, a_tokens = fix_item(item, rationale_label=item['rationale_label'], answers=True)
 
-            for (name, ctx, answers) in (('qa', q_tokens, a_tokens), ('qar', qa_tokens, r_tokens)):
+            for (name, ctx, answers) in (('qra', qr_tokens, a_tokens), ('qr', q_tokens, r_tokens)):
                 for i in range(4):
-                    is_correct = item['answer_label' if name == 'qa' else 'rationale_label'] == i
+                    is_correct = item['rationale_label' if name == 'qr' else 'answer_label'] == i
 
                     yield process_ctx_ans_for_bert(ctx, answers[i], tokenizer, counter=counter, endingonly=endingonly,
                                                    max_seq_length=max_seq_length, is_correct=is_correct)
@@ -282,18 +287,18 @@ def data_iter_test(data_fn, tokenizer, max_seq_length, endingonly):
     with open(data_fn, 'r') as f:
         for line_no, line in enumerate(tqdm(f)):
             item = json.loads(line)
-            q_tokens, a_tokens = fix_item(item, rationales=False)
+            q_tokens, r_tokens = fix_item(item, answers=False)
 
             # First yield the answers
             for i in range(4):
-                yield process_ctx_ans_for_bert(q_tokens, a_tokens[i], tokenizer, counter=counter, endingonly=endingonly,
+                yield process_ctx_ans_for_bert(q_tokens, r_tokens[i], tokenizer, counter=counter, endingonly=endingonly,
                                                max_seq_length=max_seq_length, is_correct=False)
                 counter += 1
 
             for i in range(4):
-                qa_tokens, r_tokens = fix_item(item, answer_label=i, rationales=True)
-                for r_token in r_tokens:
-                    yield process_ctx_ans_for_bert(qa_tokens, r_token, tokenizer, counter=counter,
+                qr_tokens, a_tokens = fix_item(item, rationale_label=i, answers=True)
+                for a_token in a_tokens:
+                    yield process_ctx_ans_for_bert(qr_tokens, a_token, tokenizer, counter=counter,
                                                    endingonly=endingonly,
                                                    max_seq_length=max_seq_length, is_correct=False)
                     counter += 1

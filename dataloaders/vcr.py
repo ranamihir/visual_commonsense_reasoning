@@ -117,6 +117,8 @@ class VCR(Dataset):
         print("Only relevant dets" if only_use_relevant_dets else "Using all detections", flush=True)
 
         self.add_image_as_a_box = add_image_as_a_box
+
+        # TODO: Only needed in test mode
         self.conditioned_answer_choice = conditioned_answer_choice
 
         with open(os.path.join(VCR_ANNOTS_DIR, '{}.jsonl'.format(split)), 'r') as f:
@@ -217,9 +219,9 @@ class VCR(Dataset):
 
         ###################################################################
         # Load questions and answers
-        if self.mode == 'rationale':
-            conditioned_label = item['answer_label'] if self.split != 'test' else self.conditioned_answer_choice
-            item['question'] += item['answer_choices'][conditioned_label]
+        if self.mode == 'answer':
+            conditioned_label = item['rationale_label'] if self.split != 'test' else self.conditioned_answer_choice
+            item['question'] += item['rationale_choices'][conditioned_label]
 
         answer_choices = item['{}_choices'.format(self.mode)]
         dets2use, old_det_to_new_ind = self._get_dets_to_use(item)
@@ -331,7 +333,7 @@ def collate_fn(data, to_gpu=False):
     #         if k != 'metadata':
     #             td[k] = {k2: v.cuda(non_blocking=True) for k2, v in td[k].items()} if isinstance(td[k], dict) else td[k].cuda(
     #             non_blocking=True)
- 
+
     # # No nested dicts
     # for k in sorted(td.keys()):
     #     if isinstance(td[k], dict):
@@ -361,10 +363,3 @@ class VCRLoader(torch.utils.data.DataLoader):
             **kwargs,
         )
         return loader
-
-# You could use this for debugging maybe
-# if __name__ == '__main__':
-#     train, val, test = VCR.splits()
-#     for i in range(len(train)):
-#         res = train[i]
-#         print("done with {}".format(i))

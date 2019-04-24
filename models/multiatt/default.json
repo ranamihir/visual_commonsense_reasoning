@@ -11,7 +11,7 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "reasoning_encoder": {
+    "answering_encoder": {
       "type": "lstm",
       "input_size": 1536,
       "hidden_size": 256,

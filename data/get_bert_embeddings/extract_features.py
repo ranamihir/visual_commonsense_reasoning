@@ -210,7 +210,7 @@ input_fn = input_fn_builder(
     features=features, seq_length=FLAGS.max_seq_length)
 
 output_h5_qa = h5py.File(f'../{FLAGS.name}_answer_{FLAGS.split}.h5', 'w')
-output_h5_qar = h5py.File(f'../{FLAGS.name}_rationale_{FLAGS.split}.h5', 'w')
+output_h5_qra = h5py.File(f'../{FLAGS.name}_rationale_{FLAGS.split}.h5', 'w')
 
 if FLAGS.split != 'test':
     subgroup_names = [
@@ -223,7 +223,7 @@ if FLAGS.split != 'test':
         'rationale2',
         'rationale3',
     ]
-else:
+else: # TODO: Fix order
     subgroup_names = [
         'answer0',
         'answer1',
@@ -232,7 +232,7 @@ else:
 
 for i in range(len(examples) // len(subgroup_names)):
     output_h5_qa.create_group(f'{i}')
-    output_h5_qar.create_group(f'{i}')
+    output_h5_qra.create_group(f'{i}')
 
 
 def alignment_gather(alignment, layer):
@@ -263,7 +263,7 @@ for result in tqdm(estimator.predict(input_fn, yield_single_examples=True)):
     ex2use = ind//len(subgroup_names)
     subgroup_name = subgroup_names[ind % len(subgroup_names)]
 
-    group2use = (output_h5_qa if subgroup_name.startswith('answer') else output_h5_qar)[f'{ex2use}']
+    group2use = (output_h5_qa if subgroup_name.startswith('answer') else output_h5_qra)[f'{ex2use}']
     alignment_ctx = [-1] + ctx_alignment
 
     if FLAGS.endingonly:
