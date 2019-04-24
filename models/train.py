@@ -73,12 +73,12 @@ def _to_gpu(td):
         return td
     for k in td:
         if k != 'metadata':
-            td[k] = {k2: v.cuda(non_blocking=True) for k2, v in td[k].items()} if isinstance(td[k], dict) else td[k].cuda(
-                non_blocking=True)
+            td[k] = {k2: v.cuda(non_blocking=True) for k2, v in td[k].items()} if isinstance(td[k], dict) \
+                     else td[k].cuda(non_blocking=True)
     return td
 num_workers = (4 * NUM_GPUS if NUM_CPUS == 32 else 2*NUM_GPUS)-1
 print(f"Using {num_workers} workers out of {NUM_CPUS} possible", flush=True)
-loader_params = {'batch_size': 96 // NUM_GPUS, 'num_gpus':NUM_GPUS, 'num_workers':num_workers}
+loader_params = {'batch_size': 96 // NUM_GPUS, 'num_gpus': NUM_GPUS, 'num_workers': num_workers}
 train_loader = VCRLoader.from_dataset(train, **loader_params)
 val_loader = VCRLoader.from_dataset(val, **loader_params)
 test_loader = VCRLoader.from_dataset(test, **loader_params)
@@ -115,7 +115,8 @@ for epoch_num in range(start_epoch, params['trainer']['num_epochs'] + start_epoc
     train_results = []
     norms = []
     model.train()
-    for b, (time_per_batch, batch) in enumerate(time_batch(train_loader if args.no_tqdm else tqdm(train_loader), reset_every=ARGS_RESET_EVERY)):
+    for b, (time_per_batch, batch) in enumerate(time_batch(train_loader if args.no_tqdm else tqdm(train_loader), \
+                                                reset_every=ARGS_RESET_EVERY)):
         batch = _to_gpu(batch)
         optimizer.zero_grad()
         output_dict = model(**batch)
@@ -138,6 +139,7 @@ for epoch_num in range(start_epoch, params['trainer']['num_epochs'] + start_epoc
                                             'accuracy'],
                                         'sec_per_batch': time_per_batch,
                                         'hr_per_epoch': len(train_loader) * time_per_batch / 3600,
+                                        'epoch': epoch_num
                                         }))
         if b % ARGS_RESET_EVERY == 0 and b > 0:
             norms_df = pd.DataFrame(pd.DataFrame(norms[-ARGS_RESET_EVERY:]).mean(), columns=['norm']).join(
