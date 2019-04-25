@@ -56,13 +56,19 @@ parser.add_argument(
     dest='no_tqdm',
     action='store_true',
 )
+parser.add_argument(
+    '-r2a',
+    dest='r2a',
+    action='store_true',
+)
 
 args = parser.parse_args()
 
 params = Params.from_file(args.params)
 train, val, test = VCR.splits(mode='rationale' if args.rationale else 'answer',
                               embs_to_load=params['dataset_reader'].get('embs', 'bert_da'),
-                              only_use_relevant_dets=params['dataset_reader'].get('only_use_relevant_dets', True))
+                              only_use_relevant_dets=params['dataset_reader'].get('only_use_relevant_dets', True),
+                              r2a=args.r2a)
 NUM_GPUS = torch.cuda.device_count()
 NUM_CPUS = multiprocessing.cpu_count()
 if NUM_GPUS == 0:

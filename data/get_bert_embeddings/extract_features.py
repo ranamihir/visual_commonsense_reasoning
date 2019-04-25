@@ -74,6 +74,8 @@ flags.DEFINE_bool(
     "tf.nn.embedding_lookup will be used. On TPUs, this should be True "
     "since it is much faster.")
 
+flags.DEFINE_bool("r2a", False, "Do R->A task")
+
 ####
 
 if not os.path.exists('uncased_L-12_H-768_A-12'):
@@ -176,7 +178,8 @@ data_iter_ = data_iter if FLAGS.split != 'test' else data_iter_test
 examples = [x for x in data_iter_(f'../{FLAGS.split}.jsonl',
                                  tokenizer=tokenizer,
                                  max_seq_length=FLAGS.max_seq_length,
-                                 endingonly=FLAGS.endingonly)]
+                                 endingonly=FLAGS.endingonly,
+                                 r2a=FLAGS.r2a)]
 features = convert_examples_to_features(
     examples=[x[0] for x in examples], seq_length=FLAGS.max_seq_length, tokenizer=tokenizer)
 unique_id_to_ind = {}
@@ -209,8 +212,12 @@ estimator = tf.contrib.tpu.TPUEstimator(
 input_fn = input_fn_builder(
     features=features, seq_length=FLAGS.max_seq_length)
 
-output_h5_qa = h5py.File(f'../{FLAGS.name}_answer_{FLAGS.split}.h5', 'w')
-output_h5_qra = h5py.File(f'../{FLAGS.name}_rationale_{FLAGS.split}.h5', 'w')
+if FLAGS.r2a:
+    output_h5_qa = h5py.File(f'../{FLAGS.name}_answer_r2a_{FLAGS.split}.h5', 'w')
+    output_h5_qra = h5py.File(f'../{FLAGS.name}_rationale_r2a_{FLAGS.split}.h5', 'w')
+else:
+    output_h5_qa = h5py.File(f'../{FLAGS.name}_answer_{FLAGS.split}.h5', 'w')
+    output_h5_qra = h5py.File(f'../{FLAGS.name}_rationale_{FLAGS.split}.h5', 'w')
 
 if FLAGS.split != 'test':
     subgroup_names = [

@@ -11,7 +11,7 @@
       "num_layers": 1,
       "bidirectional": true
     },
-    "reasoning_encoder": {
+    "answering_encoder": {
       "type": "lstm",
       "input_size": 1024,
       "hidden_size": 256,
@@ -22,7 +22,7 @@
     "input_dropout": 0.3,
     "pool_question": true,
     "pool_answer": true,
-    "reasoning_use_obj": false,
+    "answering_use_obj": false,
     "initializer": [
     [".*final_mlp.*weight", {"type": "xavier_uniform"}],
     [".*final_mlp.*bias", {"type": "zero"}],

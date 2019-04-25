@@ -97,7 +97,7 @@ def _fix_tokenization(tokenized_sent, bert_embs, old_det_to_new_ind, obj_to_type
 
 class VCR(Dataset):
     def __init__(self, split, mode, only_use_relevant_dets=True, add_image_as_a_box=True, embs_to_load='bert_da',
-                 conditioned_answer_choice=0):
+                 conditioned_answer_choice=0, r2a=False):
         """
 
         :param split: train, val, or test
@@ -110,9 +110,11 @@ class VCR(Dataset):
         :param conditioned_answer_choice: If you're in test mode, the answer labels aren't provided, which could be
                                           a problem for the QA->R task. Pass in 'conditioned_answer_choice=i'
                                           to always condition on the i-th answer.
+        :param r2a: is R->A task or not.
         """
         self.split = split
         self.mode = mode
+        self.r2a = r2a
         self.only_use_relevant_dets = only_use_relevant_dets
         print("Only relevant dets" if only_use_relevant_dets else "Using all detections", flush=True)
 
@@ -139,7 +141,10 @@ class VCR(Dataset):
         self.coco_obj_to_ind = {o: i for i, o in enumerate(self.coco_objects)}
 
         self.embs_to_load = embs_to_load
-        self.h5fn = os.path.join(VCR_ANNOTS_DIR, f'{self.embs_to_load}_{self.mode}_{self.split}.h5')
+        if self.r2a:
+            self.h5fn = os.path.join(VCR_ANNOTS_DIR, f'{self.embs_to_load}_{self.mode}_r2a_{self.split}.h5')
+        else:
+            self.h5fn = os.path.join(VCR_ANNOTS_DIR, f'{self.embs_to_load}_{self.mode}_{self.split}.h5')
         print("Loading embeddings from {}".format(self.h5fn), flush=True)
 
     @property
@@ -221,7 +226,10 @@ class VCR(Dataset):
         # Load questions and answers
         if self.mode == 'answer':
             conditioned_label = item['rationale_label'] if self.split != 'test' else self.conditioned_answer_choice
-            item['question'] += item['rationale_choices'][conditioned_label]
+            if self.r2a:
+                item['question'] = item['rationale_choices'][conditioned_label]
+            else:
+                item['question'] += item['rationale_choices'][conditioned_label]
 
         answer_choices = item['{}_choices'.format(self.mode)]
         dets2use, old_det_to_new_ind = self._get_dets_to_use(item)

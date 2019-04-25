@@ -193,10 +193,13 @@ def _fix_tokenization(tokenized_sent, obj_to_type, det_hist=None):
     return new_tokenization, det_hist
 
 
-def fix_item(item, rationale_label=None, answers=True):
+def fix_item(item, rationale_label=None, answers=True, r2a=False):
     if answers:
         assert rationale_label is not None
-        ctx = item['question'] + item['rationale_choices'][rationale_label]
+        if r2a:
+            ctx = item['rationale_choices'][rationale_label]
+        else:
+            ctx = item['question'] + item['rationale_choices'][rationale_label]
     else:
         ctx = item['question']
 
@@ -264,13 +267,15 @@ def process_ctx_ans_for_bert(ctx_raw, ans_raw, tokenizer, counter, endingonly, m
                         text_b=answer[0], is_correct=is_correct), context[1], answer[1]
 
 
-def data_iter(data_fn, tokenizer, max_seq_length, endingonly):
+def data_iter(data_fn, tokenizer, max_seq_length, endingonly, r2a=False):
     counter = 0
     with open(data_fn, 'r') as f:
         for line_no, line in enumerate(tqdm(f)):
             item = json.loads(line)
             q_tokens, r_tokens = fix_item(item, answers=False)
-            qr_tokens, a_tokens = fix_item(item, rationale_label=item['rationale_label'], answers=True)
+
+            # If r2a=True, qr_tokens is actually just r_tokens
+            qr_tokens, a_tokens = fix_item(item, rationale_label=item['rationale_label'], answers=True, r2a=r2a)
 
             for (name, ctx, answers) in (('qra', qr_tokens, a_tokens), ('qr', q_tokens, r_tokens)):
                 for i in range(4):
@@ -280,7 +285,7 @@ def data_iter(data_fn, tokenizer, max_seq_length, endingonly):
                                                    max_seq_length=max_seq_length, is_correct=is_correct)
                     counter += 1
 
-
+# TODO: Fix this
 def data_iter_test(data_fn, tokenizer, max_seq_length, endingonly):
     """ Essentially this needs to be a bit separate from data_iter because we don't know which answer is correct."""
     counter = 0
