@@ -2,10 +2,16 @@ data
 logs/
 plots/
 checkpoints/
-vcr1
 vcr1annots.zip
 vcr1images.zip
 models/saves*
+
+!vcr1/
+vcr1/*
+!vcr1/vcr1annots/
+vcr1/vcr1annots/*
+!vcr1/vcr1annots/data_sampling.ipynb
+!vcr1/vcr1annots/data_split.ipynb
 
 sftp-config.json
 sftp-config-alt.json
