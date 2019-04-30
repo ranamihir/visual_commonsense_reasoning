@@ -9,6 +9,7 @@ Members:
 Advisors:
   - Kyunghyun Cho
   - Samuel R. Bowman
+  - Katharina Kann
 
 ## Setting up and using the repo
 
